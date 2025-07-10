@@ -40,7 +40,7 @@ console.log("✅ È array?", Array.isArray(prints));
 
   const conn = await db.getConnection();
   try {
-    await conn.beginTransaction();
+    await conn.beginTransaction(); // beginTransaction è una funzione che dice da questo momento, tutte le operazioni che eseguirò saranno parte di una transazione unica. Finché non farò il commit o il rollback, nessuna modifica sarà definitiva."
 
     const [orderResult] = await conn.query(
       `INSERT INTO orders (full_name, mail, phone_number, total_price, billing_address, shipping_address, order_status, created_at, updated_at)
@@ -52,7 +52,7 @@ console.log("✅ È array?", Array.isArray(prints));
 
     for (const item of prints) {
       if (!item.id_print || !item.quantity_req) {
-        await conn.rollback();
+        await conn.rollback(); // Annulla tutte le query fatte nella transazione
         return res.status(400).json({ error: "Each print must have 'id_print' and 'quantity_req'" });
       }
 
@@ -63,11 +63,11 @@ console.log("✅ È array?", Array.isArray(prints));
       );
     }
 
-    await conn.commit();
+    await conn.commit();// Conferma le modifiche se tutto è andato bene
     res.status(201).json({ message: "Order created", order_id: orderId });
 
   } catch (error) {
-    await conn.rollback();
+    await conn.rollback(); // Annulla tutte le query fatte nella transazione
     
     res.status(500).json({ error: error.message });
   } finally {
