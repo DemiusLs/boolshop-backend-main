@@ -1,0 +1,27 @@
+{
+  "name": "boolshop-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node --env-file=.env --watch app.js"
+  },
+  "type": "module",
+  "author": "devlg",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "mysql2": "^3.14.1"
+  },
+  "keywords": [],
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EmanueleAnnoscia/boolshop-backend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/EmanueleAnnoscia/boolshop-backend/issues"
+  },
+  "homepage": "https://github.com/EmanueleAnnoscia/boolshop-backend#readme",
+  "description": ""
+}
