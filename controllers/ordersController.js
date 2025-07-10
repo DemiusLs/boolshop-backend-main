@@ -1,7 +1,7 @@
-const db = require("../db");
+import db from "../db.js";
 
 // GET /api/orders
-exports.getAllOrders = async (req, res) => {
+const getAllOrders = async (req, res) => {
   try {
     const [rows] = await db.query("SELECT * FROM orders");
     res.json(rows);
@@ -11,7 +11,7 @@ exports.getAllOrders = async (req, res) => {
 };
 
 // POST /api/orders
-exports.createOrder = async (req, res) => {
+const createOrder = async (req, res) => {
   const {
     full_name,
     mail,
@@ -53,3 +53,5 @@ exports.createOrder = async (req, res) => {
     conn.release();
   }
 };
+
+export default { getAllOrders, createOrder };

@@ -1,7 +1,6 @@
-const db = require("../db");
+import db from "../db.js";
 
-// GET /api/prints
-exports.getAllPrints = async (req, res) => {
+const getAllPrints = async (req, res) => {
   try {
     const [rows] = await db.query("SELECT * FROM prints");
     res.json(rows);
@@ -10,8 +9,7 @@ exports.getAllPrints = async (req, res) => {
   }
 };
 
-// GET /api/prints/slug
-exports.getPrintBySlug = async (req, res) => {
+const getPrintBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
     const [rows] = await db.query("SELECT * FROM prints WHERE slug = ?", [slug]);
@@ -23,3 +21,5 @@ exports.getPrintBySlug = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export default { getAllPrints, getPrintBySlug };
