@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import printsRoutes from "./routes/print.js";
 import ordersRoutes from "./routes/order.js";
+import ordersController from './controllers/ordersController.js';
 
 dotenv.config();
 

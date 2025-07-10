@@ -9,5 +9,9 @@ router.get("/", ordersController.getAllOrders);
 // POST new order
 router.post("/", ordersController.createOrder);
 
+//DELETE order
+router.delete('/:id', ordersController.deleteOrder);
+
+
 export default router;
 
