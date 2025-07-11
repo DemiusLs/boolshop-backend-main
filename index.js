@@ -1,16 +1,18 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import printsRoutes from "./routes/print.js";
 import ordersRoutes from "./routes/order.js";
+
 import imagePath from "./middlewares/imagePath.js";
 import routeNotMiddleware from "./middlewares/route-not-middleware.js";
 import errorHandler from "./middlewares/error-handler-middleware.js";
 
-dotenv.config();
+
+
+
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT;
 
 app.use(cors({
   origin: "*",

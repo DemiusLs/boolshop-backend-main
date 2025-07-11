@@ -30,6 +30,7 @@ http://localhost:3001/api/orders/2
 
 //-------query correzione primary key
 
+
 ALTER TABLE order_print
 DROP PRIMARY KEY,
 ADD PRIMARY KEY (id_order, id_print);
