@@ -1,9 +1,9 @@
-import db from "../db.js";
+import connection from "../db.js";
 
 // GET /api/orders
 const getAllOrders = async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT * FROM orders");
+    const [rows] = await connection.query("SELECT * FROM orders");
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -34,7 +34,7 @@ const createOrder = async (req, res) => {
     return res.status(400).json({ error: "'la stampa' deve essere un array" });
   }
 
-  const conn = await db.getConnection();
+  const conn = await connection.getConnection();
   try {
     await conn.beginTransaction(); // beginTransaction è una funzione che dice da questo momento, tutte le operazioni che eseguirò saranno parte di una transazione unica. Finché non farò il commit o il rollback, nessuna modifica sarà definitiva."
 
@@ -75,7 +75,7 @@ const createOrder = async (req, res) => {
 const deleteOrder = async (req, res) => {
   const orderId = req.params.id;
 
-  const conn = await db.getConnection();
+  const conn = await connection.getConnection();
   try {
     await conn.beginTransaction();
 

@@ -1,4 +1,4 @@
-import db from "../db.js";
+import connection from "../db.js";
 
 const getAllPrints = async (req, res) => {
   try {
@@ -12,7 +12,7 @@ const getAllPrints = async (req, res) => {
 const getPrintBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
-    const [rows] = await db.query("SELECT * FROM prints WHERE slug = ?", [slug]);
+    const [rows] = await connection.query("SELECT * FROM prints WHERE slug = ?", [slug]);
     if (rows.length === 0) {
       return res.status(404).json({ error: "Print not found" });
     }
