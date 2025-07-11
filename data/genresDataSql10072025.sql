@@ -1,4 +1,4 @@
-INSERT INTO genres (id, name, abstract, created_at, update_at)
+INSERT INTO genres (id, name, abstract, created_at, updated_at)
 VALUES
 (1, 'Abstract Art', 'Arte non rappresentativa che usa forme, colori e linee per evocare emozioni e idee.', NOW(), NOW()),
 (2, 'Realism', 'Stile che rappresenta la vita quotidiana con precisione e senza idealizzazioni.', NOW(), NOW()),
