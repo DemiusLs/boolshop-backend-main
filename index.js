@@ -3,7 +3,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 import printsRoutes from "./routes/print.js";
 import ordersRoutes from "./routes/order.js";
-import ordersController from './controllers/ordersController.js';
+import imagePath from "./middlewares/imagePath.js";
+import routeNotMiddleware from "./middlewares/route-not-middleware.js";
+import errorHandler from "./middlewares/error-handler-middleware.js";
 
 dotenv.config();
 
@@ -13,13 +15,17 @@ const port = process.env.PORT || 3001;
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
 
 app.use(express.json());
 
-app.use("/api/prints", printsRoutes);
+app.use("/api/prints", imagePath, printsRoutes);
 app.use("/api/orders", ordersRoutes);
+
+
+app.use(routeNotMiddleware);
+app.use(errorHandler);
 
 app.listen(port, () => {
   console.log(`Server in ascolto alla porta ${port}`);
