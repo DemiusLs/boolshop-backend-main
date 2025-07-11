@@ -10,3 +10,4 @@ VALUES
 (8, 'Photorealism', 'Stile pittorico che imita fotografie con incredibile dettaglio.', NOW(), NOW()),
 (9, 'Minimalism', 'Arte minimalista che usa forme geometriche semplici e palette ridotte.', NOW(), NOW()),
 (10, 'Digital Art', 'Arte creata o manipolata digitalmente usando strumenti elettronici.', NOW(), NOW());
+
