@@ -35,9 +35,6 @@ const createOrder = async (req, res) => {
     return res.status(400).json({ error: "'la stampa' deve essere un array" });
   }
 
-  console.log("✅ Tipo di prints:", typeof prints);
-console.log("✅ È array?", Array.isArray(prints));
-
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction(); // beginTransaction è una funzione che dice da questo momento, tutte le operazioni che eseguirò saranno parte di una transazione unica. Finché non farò il commit o il rollback, nessuna modifica sarà definitiva."
@@ -83,6 +80,13 @@ const deleteOrder = async (req, res) => {
   try {
     await conn.beginTransaction();
 
+    // 🔸 Elimina prima le righe nella tabella ponte order_print
+    await conn.query(
+      `DELETE FROM order_print WHERE id_order = ?`,
+      [orderId]
+    );
+
+    // 🔸 Poi elimina l'ordine
     const [result] = await conn.query(
       `DELETE FROM orders WHERE id = ?`,
       [orderId]
