@@ -1,18 +1,19 @@
 import connection from "../db.js";
 
+const slowCon = connection.promise()
 
-const getAllOrders = (req, res) => {
-  connection.query("SELECT * FROM orders", (error, results) => {
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-    res.json(results);
-  });
+// GET tutti gli ordini
+const getAllOrders = async (req, res) => {
+  try {
+    const [rows] = await slowCon.query("SELECT * FROM orders");
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
-// POST create order
-const createOrder = (req, res) => {
-  console.log("POST /orders body:", req.body);  // <--- debug
+// POST crea nuovo ordine
+const createOrder = async (req, res) => {
   const {
     full_name,
     mail,
@@ -21,147 +22,72 @@ const createOrder = (req, res) => {
     billing_address,
     shipping_address,
     order_status,
-    prints // array di oggetti [{ id_print, quantity_req }]
+    prints
   } = req.body;
 
   if (!Array.isArray(prints)) {
-    console.log("Errore: prints non è un array");
     return res.status(400).json({ error: "'prints' deve essere un array" });
   }
 
-  // Prima prendi una connessione dal pool
-  connection.getConnection((err, conn) => {
-    if (err) {
-      console.log("Errore beginTransaction:", err);
-      return res.status(500).json({ error: err.message });
-    }
+  try {
+    await slowCon.beginTransaction();
 
-    // Inizia la transazione
-    conn.beginTransaction((err) => {
-      if (err) {
-        conn.release();
-        console.log("Errore inserimento ordine:", err);
-        return res.status(500).json({ error: err.message });
+    const [orderResult] = await slowCon.query(
+      `INSERT INTO orders (full_name, mail, phone_number, total_price, billing_address, shipping_address, order_status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [full_name, mail, phone_number, total_price, billing_address, shipping_address, order_status]
+    );
+
+    const orderId = orderResult.insertId;
+
+    for (const item of prints) {
+      if (!item.id_print || !item.quantity_req) {
+        await slowCon.rollback();
+        return res.status(400).json({ error: "Ogni print deve avere 'id_print' e 'quantity_req'" });
       }
 
-      // Inserisci l'ordine
-      const orderSql = `INSERT INTO orders 
-        (full_name, mail, phone_number, total_price, billing_address, shipping_address, order_status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`;
-
-      conn.query(orderSql,
-        [full_name, mail, phone_number, total_price, billing_address, shipping_address, order_status],
-        (err, orderResult) => {
-          if (err) {
-            return conn.rollback(() => {
-              conn.release();
-              res.status(500).json({ error: err.message });
-            });
-          }
-
-          const orderId = orderResult.insertId;
-          console.log("Inserito ordine id:", orderId);
-
-          // Funzione ricorsiva per inserire ogni print (per evitare callback troppo annidati)
-          const insertPrints = (index) => {
-            if (index >= prints.length) {
-              // Tutto inserito, conferma transazione
-              return conn.commit((err) => {
-                conn.release();
-                if (err) {
-                  console.log("Errore commit:", err);
-                  return res.status(500).json({ error: err.message });
-                }
-                console.log("Ordine creato con successo");
-                res.status(201).json({ message: "Order created", order_id: orderId });
-              });
-            }
-
-            const item = prints[index];
-            console.log("Inserisco print", index, item);
-
-            if (!item.id_print || !item.quantity_req) {
-              return conn.rollback(() => {
-                conn.release();
-                res.status(400).json({ error: "Each print must have 'id_print' and 'quantity_req'" });
-              });
-            }
-
-            const printSql = `INSERT INTO order_print (id_print, id_order, quantity_req, created_at, updated_at)
-                              VALUES (?, ?, ?, NOW(), NOW())`;
-
-            conn.query(printSql, [item.id_print, orderId, item.quantity_req], (err) => {
-              if (err) {
-                console.log("Errore inserimento print:", err);
-                return conn.rollback(() => {
-                  conn.release();
-                  res.status(500).json({ error: err.message });
-                });
-              }
-              // Passa al prossimo item
-              insertPrints(index + 1);
-            });
-          };
-
-          insertPrints(0);
-        }
+      await slowCon.query(
+        `INSERT INTO order_print (id_print, id_order, quantity_req, created_at, updated_at)
+         VALUES (?, ?, ?, NOW(), NOW())`,
+        [item.id_print, orderId, item.quantity_req]
       );
-    });
-  });
+    }
+
+    await slowCon.commit();
+    res.status(201).json({ message: "Order created", order_id: orderId });
+  } catch (error) {
+    await slowCon.rollback();
+    res.status(500).json({ error: error.message });
+  }
 };
 
-//DELETE cancellare ordine
-const deleteOrder = (req, res) => {
+// DELETE ordine + prints associati
+const deleteOrder = async (req, res) => {
   const orderId = req.params.id;
 
-  connection.getConnection((err, conn) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
+  try {
+    await slowCon.beginTransaction();
+
+    await slowCon.query("DELETE FROM order_print WHERE id_order = ?", [orderId]);
+
+    const [result] = await slowCon.query("DELETE FROM orders WHERE id = ?", [orderId]);
+
+    if (result.affectedRows === 0) {
+      await slowCon.rollback();
+      return res.status(404).json({ error: "Ordine non trovato" });
     }
 
-    conn.beginTransaction((err) => {
-      if (err) {
-        conn.release();
-        return res.status(500).json({ error: err.message });
-      }
-
-      conn.query("DELETE FROM order_print WHERE id_order = ?", [orderId], (err) => {
-        if (err) {
-          return conn.rollback(() => {
-            conn.release();
-            res.status(500).json({ error: err.message });
-          });
-        }
-
-        conn.query("DELETE FROM orders WHERE id = ?", [orderId], (err, result) => {
-          if (err) {
-            return conn.rollback(() => {
-              conn.release();
-              res.status(500).json({ error: err.message });
-            });
-          }
-
-          if (result.affectedRows === 0) {
-            return conn.rollback(() => {
-              conn.release();
-              res.status(404).json({ error: "Ordine non trovato" });
-            });
-          }
-
-          conn.commit((err) => {
-            conn.release();
-            if (err) {
-              return res.status(500).json({ error: err.message });
-            }
-            res.json({ message: "Ordine cancellato correttamente", order_id: orderId });
-          });
-        });
-      });
-    });
-  });
+    await slowCon.commit();
+    res.json({ message: "Ordine cancellato correttamente", order_id: orderId });
+  } catch (error) {
+    await slowCon.rollback();
+    res.status(500).json({ error: error.message });
+  }
 };
 
 export default { getAllOrders, createOrder, deleteOrder };
+
+
 
 
 
@@ -202,7 +128,7 @@ export default { getAllOrders, createOrder, deleteOrder };
 //     return res.status(400).json({ error: "'la stampa' deve essere un array" });
 //   }
 
-//   const conn = await connection.getConnection();
+//   const conn = await connection.query();
 //   try {
 //     await conn.beginTransaction(); // beginTransaction è una funzione che dice da questo momento, tutte le operazioni che eseguirò saranno parte di una transazione unica. Finché non farò il commit o il rollback, nessuna modifica sarà definitiva."
 
