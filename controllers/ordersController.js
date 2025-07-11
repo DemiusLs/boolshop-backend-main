@@ -13,7 +13,6 @@ const getAllOrders = async (req, res) => {
 // POST /api/orders
 const createOrder = async (req, res) => {
 
-  console.log("⚡ createOrder chiamato");
 
   const {
     full_name,
@@ -80,13 +79,13 @@ const deleteOrder = async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // 🔸 Elimina prima le righe nella tabella ponte order_print
+    //Elimina prima le righe nella tabella ponte order_print
     await conn.query(
       `DELETE FROM order_print WHERE id_order = ?`,
       [orderId]
     );
 
-    // 🔸 Poi elimina l'ordine
+    // Poi elimina l'ordine
     const [result] = await conn.query(
       `DELETE FROM orders WHERE id = ?`,
       [orderId]
