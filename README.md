@@ -17,7 +17,7 @@ body json di test
   "total_price": 120.00,
   "billing_address": "Via Roma 10, 00100 Roma, Italia",
   "shipping_address": "Via Napoli 20, 00184 Roma, Italia",
-  "order_status": "pending",
+  "order_status": 1,
   "prints": [
     { "id_print": 1, "quantity_req": 2 },
     { "id_print": 4, "quantity_req": 1 }
