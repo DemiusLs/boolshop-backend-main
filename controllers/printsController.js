@@ -2,17 +2,30 @@ import connection from "../db.js";
 
 //GET INDEX get all printas
 const getAllPrints = (req, res) => {
-    connection.query("SELECT * FROM prints", (error, results) => {
+  connection.query("SELECT * FROM prints", (error, results) => {
     if (error) {
       return res.status(500).json({ error: error.message });
+
+    } else {
+      const prints = results.map((curPrint) => {
+        return {
+          ...curPrint,
+          img_url: `${req.imagePath}/${curPrint.img_url}`,
+        };
+      });
+
+      res.json({
+        data: prints,
+        count: prints.length
+      });
     }
-    res.json(results); 
+
   });
 };
 
 //GET SHOW get single prints
 const getPrintBySlug = (req, res) => {
-  const {slug} = req.params;
+  const { slug } = req.params;
   connection.query("SELECT * FROM prints WHERE slug = ?", [slug], (error, results) => {
     if (error) {
       return res.status(500).json({ error: error.message });

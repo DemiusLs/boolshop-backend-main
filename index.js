@@ -19,7 +19,7 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE"],
 }));
 
-
+app.use(express.static("public"));
 app.use(express.json());
 
 app.use("/api/prints", imagePath, printsRoutes);
