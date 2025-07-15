@@ -41,15 +41,25 @@ const createOrder = async (req, res) => {
     const orderId = orderResult.insertId;
 
     for (const item of prints) {
-      if (!item.id_print || !item.quantity_req) {
+      if (!item.slug || !item.quantity_req) {
         await slowCon.rollback();
-        return res.status(400).json({ error: "Ogni print deve avere 'id_print' e 'quantity_req'" });
+        return res.status(400).json({ error: "Ogni print deve avere 'slug' e 'quantity_req'" });
       }
 
-      await slowCon.query(
-        `INSERT INTO order_print (id_print, id_order, quantity_req, created_at, updated_at)
-         VALUES (?, ?, ?, NOW(), NOW())`,
-        [item.id_print, orderId, item.quantity_req]
+      const [[printRow]] = await slowCon.query(
+        `SELECT id FROM prints WHERE slug = ?`,
+        [item.slug]
+       );
+
+  if (!printRow) {
+    await slowCon.rollback();
+    return res.status(400).json({ error: `Print con slug '${item.slug}' non trovata` });
+  }
+
+      await slowCon.query(          
+        `INSERT INTO order_print (id_print, slug, id_order, quantity_req, created_at, updated_at)
+         VALUES (?, ?, ?, ?, NOW(), NOW())`,
+        [printRow.id , item.slug, orderId, item.quantity_req]
       );
     }
 

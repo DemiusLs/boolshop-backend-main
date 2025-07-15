@@ -19,10 +19,11 @@ body json di test
   "shipping_address": "Via Napoli 20, 00184 Roma, Italia",
   "order_status": 1,
   "prints": [
-    { "id_print": 1, "quantity_req": 2 },
-    { "id_print": 4, "quantity_req": 1 }
+    { "slug": "graffiti-skyline", "quantity_req": 2 },
+    { "slug": "dot-cosmos", "quantity_req": 1 }
   ]
 }
+
 
 
 DELETE ORDER
