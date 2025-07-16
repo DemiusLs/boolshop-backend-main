@@ -2,26 +2,36 @@ import connection from "../db.js";
 
 //GET INDEX get all printas
 const getAllPrints = (req, res) => {
-  connection.query("SELECT * FROM prints", (error, results) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+
+  const countSql = "SELECT COUNT(*) AS total FROM prints";
+  const dataSql = "SELECT * FROM prints LIMIT ? OFFSET ?";
+
+  connection.query(countSql, (error, countResult) => {
     if (error) {
       return res.status(500).json({ error: error.message });
+ }
+      const total = countResult[0].total;
+      const totalPages = Math.ceil(total / limit);
 
-    } else {
-      const prints = results.map((curPrint) => {
-        return {
-          ...curPrint,
-          img_url: `${req.imagePath}/${curPrint.img_url}`,
-        };
-      });
+      connection.query(dataSql, [limit, offset], (error, dataResult) => {
+        if (error) return res.status(500).json({ error: error.message })
 
-      res.json({
-        data: prints,
-        count: prints.length
-      });
-    }
 
+        res.json({
+          page,
+          limit,
+          total,
+          totalPages,
+          data: dataResult
+        });
+      })
+   
   });
-};
+}
+
 
 //GET SHOW get single prints
 const getPrintBySlug = (req, res) => {
