@@ -61,7 +61,7 @@ const getAllPrints = (req, res) => {
   sql += " LIMIT ? OFFSET ?";
   params.push(limit, offset);
 
-  // ✅ Esegui query count con countParams
+  //  Esegui query count con countParams
   connection.query(countSql, countParams, (error, countResult) => {
     if (error) {
       return res.status(500).json({ error: error.message });
@@ -129,14 +129,33 @@ const getAllPrints = (req, res) => {
 //GET SHOW get single prints
 const getPrintBySlug = (req, res) => {
   const { slug } = req.params;
-  connection.query("SELECT * FROM prints WHERE slug = ?", [slug], (error, results) => {
+
+  const query = `
+    SELECT 
+      prints.*, 
+      genres.name AS genre_name 
+    FROM prints
+    JOIN genres ON prints.id_genre = genres.id
+    WHERE prints.slug = ?
+  `;
+
+  connection.query(query, [slug], (error, results) => {
     if (error) {
       return res.status(500).json({ error: error.message });
     }
+
     if (results.length === 0) {
       return res.status(404).json({ error: "Stampa non trovata" });
     }
-    res.json(results[0]);
+
+    const print = results[0];
+    // Modifica img_url aggiungendo il path completo
+    const imageUrl = `${req.imagePath}/${print.img_url}`;
+
+    res.json({
+      ...print,
+      img_url: imageUrl
+    });
   });
 };
 
