@@ -1,4 +1,5 @@
 import connection from "../db.js";
+import imagePath from "../middlewares/imagePath.js";
 
 //GET INDEX get all printas
 const getAllPrints = (req, res) => {
@@ -12,22 +13,26 @@ const getAllPrints = (req, res) => {
   connection.query(countSql, (error, countResult) => {
     if (error) {
       return res.status(500).json({ error: error.message });
- }
-      const total = countResult[0].total;
-      const totalPages = Math.ceil(total / limit);
+    }
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
 
-      connection.query(dataSql, [limit, offset], (error, dataResult) => {
-        if (error) return res.status(500).json({ error: error.message })
+    connection.query(dataSql, [limit, offset], (error, dataResult) => {
+      if (error) return res.status(500).json({ error: error.message })
 
+      const prints = dataResult.map(print => ({
+        ...print,
+        img_url: `${req.imagePath}/${print.img_url}`,  // Corretto con backtick
+      }));
 
-        res.json({
-          page,
-          limit,
-          total,
-          totalPages,
-          data: dataResult
-        });
-      })
+  res.json({
+    page,
+    limit,
+    total,
+    totalPages,
+    data: prints
+  });
+})
    
   });
 }
