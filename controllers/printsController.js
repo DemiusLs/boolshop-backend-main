@@ -3,32 +3,25 @@ import imagePath from "../middlewares/imagePath.js";
 
 //GET INDEX get all prints
 const getAllPrints = (req, res) => {
-
-  const { filter, id_genre, genre, search, sort } = req.query;
+  const { filter, genre, search, sort } = req.query;
 
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
 
-  const countSql = "SELECT COUNT(*) AS total FROM prints";
+  // Parte comune
+  let baseQuery = `
+  FROM prints
+  JOIN genres ON prints.id_genre = genres.id
+`;
 
-
-
-  let sql = `
-    SELECT prints.*, genres.name AS genre_name
-    FROM prints
-    JOIN genres ON prints.id_genre = genres.id
-  `;
   const conditions = [];
   const params = [];
 
+  // Condizioni per la query principale
   if (filter === "new") conditions.push("status = 1");
   if (filter === "sale") conditions.push("discount > 0");
   if (filter === "featured") conditions.push("is_featured = 1");
-  if (id_genre) {
-    conditions.push("prints.id_genre = ?");
-    params.push(id_genre);
-  }
   if (genre) {
     conditions.push("genres.name = ?");
     params.push(genre);
@@ -38,13 +31,17 @@ const getAllPrints = (req, res) => {
     params.push(`%${search}%`);
   }
 
+  let whereClause = "";
   if (conditions.length > 0) {
-    sql += " WHERE " + conditions.join(" AND ");
+    whereClause = "WHERE " + conditions.join(" AND ");
   }
 
+  // Costruisci query COUNT con le stesse condizioni
+  const countSql = `SELECT COUNT(*) AS total ${baseQuery} ${whereClause}`;
+  const countParams = [...params];
 
-
-
+  // Costruisci query dati con ordinamento e paginazione
+  let sql = `SELECT prints.*, genres.name AS genre_name ${baseQuery} ${whereClause}`;
   switch (sort) {
     case "price_asc":
       sql += " ORDER BY prints.price ASC";
@@ -52,18 +49,20 @@ const getAllPrints = (req, res) => {
     case "price_desc":
       sql += " ORDER BY prints.price DESC";
       break;
+    case "a_z":
+      sql += " ORDER BY prints.name ASC";
+      break;
+    case "z_a":
+      sql += " ORDER BY prints.name DESC";
+      break;
     default:
       sql += " ORDER BY prints.created_at DESC";
   }
+  sql += " LIMIT ? OFFSET ?";
+  params.push(limit, offset);
 
-  sql += " LIMIT ? OFFSET ?"
-  params.push(limit)
-  params.push(offset)
-
-  console.log(params)
-  console.log(sql)
-
-  connection.query(countSql, (error, countResult) => {
+  // ✅ Esegui query count con countParams
+  connection.query(countSql, countParams, (error, countResult) => {
     if (error) {
       return res.status(500).json({ error: error.message });
     }
@@ -81,49 +80,50 @@ const getAllPrints = (req, res) => {
         img_url: `${req.imagePath}/${curPrint.img_url}`,
       }));
 
+      console.log("COUNT SQL:", countSql);
+      console.log("COUNT PARAMS:", countParams);
 
       res.json({
         page,
         limit,
         total,
         totalPages,
-        data: prints, count: prints.length
+        data: prints,
+        count: prints.length,
       });
-    })
-      /*
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const offset = (page - 1) * limit;
-      
-        const countSql = "SELECT COUNT(*) AS total FROM prints";
-        const dataSql = "SELECT * FROM prints LIMIT ? OFFSET ?";
-      
-        connection.query(countSql, (error, countResult) => {
-          if (error) {
-            return res.status(500).json({ error: error.message });
-          }
-          const total = countResult[0].total;
-          const totalPages = Math.ceil(total / limit);
-      
-          connection.query(dataSql, [limit, offset], (error, dataResult) => {
-            if (error) return res.status(500).json({ error: error.message })
-      
-            const prints = dataResult.map(print => ({
-              ...print,
-              img_url: `${req.imagePath}/${print.img_url}`,  // Corretto con backtick
-            }));
-      
-        res.json({
-          page,
-          limit,
-          total,
-          totalPages,
-          data: prints */
-      ;
-
-
+    });
   });
-}
+};
+/*
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+ 
+  const countSql = "SELECT COUNT(*) AS total FROM prints";
+  const dataSql = "SELECT * FROM prints LIMIT ? OFFSET ?";
+ 
+  connection.query(countSql, (error, countResult) => {
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
+ 
+    connection.query(dataSql, [limit, offset], (error, dataResult) => {
+      if (error) return res.status(500).json({ error: error.message })
+ 
+      const prints = dataResult.map(print => ({
+        ...print,
+        img_url: `${req.imagePath}/${print.img_url}`,  // Corretto con backtick
+      }));
+ 
+  res.json({
+    page,
+    limit,
+    total,
+    totalPages,
+    data: prints */
+
 
 
 //GET SHOW get single prints
