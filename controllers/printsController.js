@@ -1,8 +1,62 @@
 import connection from "../db.js";
 import imagePath from "../middlewares/imagePath.js";
 
-//GET INDEX get all printas
+//GET INDEX get all prints
 const getAllPrints = (req, res) => {
+
+  const { filter, id_genre, genre, search, sort } = req.query;
+
+  let sql = `
+    SELECT prints.*, genres.name AS genre_name
+    FROM prints
+    JOIN genres ON prints.id_genre = genres.id
+  `;
+  const conditions = [];
+  const params = [];
+
+  if (filter === "new") conditions.push("status = 1");
+  if (filter === "sale") conditions.push("discount > 0");
+  if (filter === "featured") conditions.push("is_featured = 1");
+  if (id_genre) {
+    conditions.push("prints.id_genre = ?");
+    params.push(id_genre);
+  }
+  if (genre) {
+    conditions.push("genres.name = ?");
+    params.push(genre);
+  }
+  if (search) {
+    conditions.push("prints.name LIKE ?");
+    params.push(`%${search}%`);
+  }
+
+  if (conditions.length > 0) {
+    sql += " WHERE " + conditions.join(" AND ");
+  }
+
+  switch (sort) {
+    case "price_asc":
+      sql += " ORDER BY prints.price ASC";
+      break;
+    case "price_desc":
+      sql += " ORDER BY prints.price DESC";
+      break;
+    default:
+      sql += " ORDER BY prints.created_at DESC";
+  }
+
+  connection.query(sql, params, (error, results) => {
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    const prints = results.map((curPrint) => ({
+      ...curPrint,
+      img_url: `${req.imagePath}/${curPrint.img_url}`,
+    }));
+
+    res.json({ data: prints, count: prints.length });
+/*
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
@@ -30,7 +84,7 @@ const getAllPrints = (req, res) => {
     limit,
     total,
     totalPages,
-    data: prints
+    data: prints */
   });
 })
    
