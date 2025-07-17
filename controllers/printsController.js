@@ -1,7 +1,9 @@
 import connection from "../db.js";
+import imagePath from "../middlewares/imagePath.js";
 
 //GET INDEX get all prints
 const getAllPrints = (req, res) => {
+
   const { filter, id_genre, genre, search, sort } = req.query;
 
   let sql = `
@@ -54,8 +56,41 @@ const getAllPrints = (req, res) => {
     }));
 
     res.json({ data: prints, count: prints.length });
+/*
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+
+  const countSql = "SELECT COUNT(*) AS total FROM prints";
+  const dataSql = "SELECT * FROM prints LIMIT ? OFFSET ?";
+
+  connection.query(countSql, (error, countResult) => {
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
+
+    connection.query(dataSql, [limit, offset], (error, dataResult) => {
+      if (error) return res.status(500).json({ error: error.message })
+
+      const prints = dataResult.map(print => ({
+        ...print,
+        img_url: `${req.imagePath}/${print.img_url}`,  // Corretto con backtick
+      }));
+
+  res.json({
+    page,
+    limit,
+    total,
+    totalPages,
+    data: prints */
   });
-};
+})
+   
+  });
+}
+
 
 //GET SHOW get single prints
 const getPrintBySlug = (req, res) => {
