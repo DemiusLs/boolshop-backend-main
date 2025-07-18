@@ -135,7 +135,7 @@ const createOrder = async (req, res) => {
       Cliente: ${full_name} (${mail})
 
       Riepilogo ordine:
-${orderItemsText}
+      ${orderItemsText}
 
       Totale: €${total.toFixed(2)}
     `;
@@ -145,7 +145,7 @@ ${orderItemsText}
       adminEmail, adminSubject, adminHtmlContent, adminTextContent
     );
 
-    res.status(201).json({ message: "Ordine creato e email inviata", order_id: orderId });
+    res.status(201).json({ message: "Ordine creato e email inviata", order_id: orderId  ,total_price: total.toFixed(2)});
 
   } catch (error) {
     await slowCon.rollback();
