@@ -6,7 +6,7 @@ const getAllPrints = (req, res) => {
   const { filter, genre, search, sort } = req.query;
 
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+  const limit = parseInt(req.query.limit);
   const offset = (page - 1) * limit;
 
   // Parte comune
@@ -44,10 +44,10 @@ const getAllPrints = (req, res) => {
   let sql = `SELECT prints.*, genres.name AS genre_name ${baseQuery} ${whereClause}`;
   switch (sort) {
     case "price_asc":
-      sql += " ORDER BY prints.price ASC";
+      sql += " ORDER BY price * (1 - IFNULL(discount, 0) / 100) ASC";
       break;
     case "price_desc":
-      sql += " ORDER BY prints.price DESC";
+      sql += " ORDER BY price * (1 - IFNULL(discount, 0) / 100) DESC";
       break;
     case "a_z":
       sql += " ORDER BY prints.name ASC";
@@ -58,8 +58,12 @@ const getAllPrints = (req, res) => {
     default:
       sql += " ORDER BY prints.created_at DESC";
   }
-  sql += " LIMIT ? OFFSET ?";
-  params.push(limit, offset);
+
+  if (limit) {
+    sql += " LIMIT ? OFFSET ?";
+    params.push(limit, offset);
+  }
+
 
   //  Esegui query count con countParams
   connection.query(countSql, countParams, (error, countResult) => {
@@ -80,8 +84,6 @@ const getAllPrints = (req, res) => {
         img_url: `${req.imagePath}/${curPrint.img_url}`,
       }));
 
-      console.log("COUNT SQL:", countSql);
-      console.log("COUNT PARAMS:", countParams);
 
       res.json({
         page,
