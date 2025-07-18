@@ -47,7 +47,7 @@ const getAllPrints = (req, res) => {
       sql += " ORDER BY price * (1 - IFNULL(discount, 0) / 100) ASC";
       break;
     case "price_desc":
-      sql += "ORDER BY price * (1 - IFNULL(discount, 0) / 100) DESC";
+      sql += " ORDER BY price * (1 - IFNULL(discount, 0) / 100) DESC";
       break;
     case "a_z":
       sql += " ORDER BY prints.name ASC";
