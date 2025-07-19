@@ -8,7 +8,7 @@ import {
 const router = express.Router();
 
 router.get("/:code", getDiscountByCode);
-router.put("/:id", updateDiscountUsage);
+router.put("/update/:code", updateDiscountUsage);
 router.post("/", createDiscountCode); 
 
 

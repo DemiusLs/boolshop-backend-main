@@ -12,18 +12,19 @@ export const getDiscountByCode = async (req, res, next) => {
   try {
     const [rows] = await slowCon.query(
       `SELECT * FROM discount_codes
-        WHERE id = ?
-        AND validity = 1
-        AND NOW() BETWEEN valid_from AND valid_until`,
+       WHERE code = ?
+       AND validity = 1
+       AND NOW() BETWEEN valid_from AND valid_until`,
       [code]
     );
 
-
     if (rows.length === 0) {
-      return res.status(404).json({ message: "Codice sconto non valido o scaduto." });
+      // Rispondi con 200 e un oggetto che indica codice non valido
+      return res.json({ valid: false, message: "Codice sconto non valido o scaduto." });
     }
 
-    res.json(rows[0]);
+    // Se valido, ritorna i dati con valid: true
+    return res.json({ valid: true, ...rows[0] });
   } catch (err) {
     next(err);
   }
@@ -31,15 +32,15 @@ export const getDiscountByCode = async (req, res, next) => {
 
 // UPDATE: aggiorna used_count dato un ID
 export const updateDiscountUsage = async (req, res, next) => {
-  const { id } = req.params;
+  const { code } = req.params;
 
   try {
     const [result] = await slowCon.query(
       `UPDATE discount_codes
        SET used_count = used_count + 1,
            update_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [id]
+       WHERE code = ?`,
+      [code]
     );
 
     if (result.affectedRows === 0) {

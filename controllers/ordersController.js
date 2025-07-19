@@ -24,7 +24,8 @@ const createOrder = async (req, res) => {
     billing_address,
     shipping_address,
     order_status,
-    prints
+    prints,
+    discount_code
   } = req.body;
 
   if (!Array.isArray(prints)) {
@@ -84,6 +85,27 @@ const createOrder = async (req, res) => {
 
       const subtotal = finalPrice * item.quantity_req;
       total += subtotal;
+
+      let discountValue = 0;
+
+      if (discount_code) {
+        const [[discountRow]] = await slowCon.query(
+          `SELECT discount_value FROM discount_codes
+            WHERE code = ? AND validity = 1 AND NOW() BETWEEN valid_from AND valid_until`,
+          [discount_code]
+        );
+
+        if (discountRow) {
+          discountValue = parseFloat(discountRow.discount_value) || 0;
+          total = total - (total * discountValue) / 100;
+
+          await slowCon.query(
+            `UPDATE discount_codes SET used_count = used_count + 1, update_at = NOW()
+       WHERE code = ?`,
+            [discount_code]
+          );
+        }
+      }
 
       // Inserimento in order_print
       await slowCon.query(
