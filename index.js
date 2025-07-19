@@ -1,11 +1,9 @@
 import express from "express";
 import cors from "cors";
-
-
+import discountRoutes from "./routes/discount.js";
 import printsRoutes from "./routes/print.js";
 import ordersRoutes from "./routes/order.js";
 import mailRoutes from "./routes/mail.js";
-
 import imagePath from "./middlewares/imagePath.js";
 import routeNotMiddleware from "./middlewares/route-not-middleware.js";
 import errorHandler from "./middlewares/error-handler-middleware.js";
@@ -26,7 +24,7 @@ app.use(express.json());
 
 app.use("/api/prints", imagePath, printsRoutes);
 app.use("/api/orders", ordersRoutes);
-
+app.use("/api/discounts", discountRoutes);
 
 app.use('/api/email', mailRoutes);
 

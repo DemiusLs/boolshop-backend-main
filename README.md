@@ -35,3 +35,14 @@ http://localhost:3001/api/orders/2
 ALTER TABLE order_print
 DROP PRIMARY KEY,
 ADD PRIMARY KEY (id_order, id_print);
+
+
+POST create code body json
+{
+  "code": "SUMMER29",
+  "description": "Sconto estivo del 29%",
+  "discount_value": 29,
+  "validity": 1,
+  "valid_from": "2026-07-20T00:00:00",
+  "valid_until": "2026-08-31T23:59:59"
+}
