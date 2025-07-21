@@ -26,6 +26,8 @@ const createOrder = async (req, res) => {
     order_status,
     payment_intent_id,
     prints
+    prints,
+    discount_code
   } = req.body;
   console.log(req.body);
 
@@ -37,7 +39,25 @@ const createOrder = async (req, res) => {
   try {
     await slowCon.beginTransaction();
 
-    // 1. Crea l’ordine senza total_price
+    // 1. Verifica disponibilità stock
+    for (const item of prints) {
+      const [[printRow]] = await slowCon.query(
+        `SELECT stock FROM prints WHERE slug = ?`,
+        [item.slug]
+      );
+
+      if (!printRow) {
+        await slowCon.rollback();
+        return res.status(400).json({ error: `Print con slug '${item.slug}' non trovata` });
+      }
+
+      if (printRow.stock < item.quantity_req) {
+        await slowCon.rollback();
+        return res.status(400).json({ error: `Disponibilità insufficiente per '${item.slug}'` });
+      }
+    }
+
+    // 2. Crea ordine senza prezzo
     const [orderResult] = await slowCon.query(
       `INSERT INTO orders (
         full_name, mail, phone_number,
@@ -50,38 +70,49 @@ const createOrder = async (req, res) => {
 
     const orderId = orderResult.insertId;
 
-    // 2. Variabili per calcolo totale e email
     let total = 0;
     let orderItemsHtml = '';
     let orderItemsText = '';
 
+    // 3. Inserisci prodotti in order_print + calcolo totale + aggiorna stock
     for (const item of prints) {
-      if (!item.slug || !item.quantity_req) {
-        await slowCon.rollback();
-        return res.status(400).json({ error: "Ogni print deve avere 'slug' e 'quantity_req'" });
-      }
-
       const [[printRow]] = await slowCon.query(
         `SELECT id, name, price, discount, stock FROM prints WHERE slug = ?`,
         [item.slug]
       );
 
-      if (!printRow) {
-        await slowCon.rollback();
-        return res.status(400).json({ error: `Print con slug '${item.slug}' non trovata` });
+      const price = parseFloat(printRow.price) || 0;
+      const discount = parseFloat(printRow.discount) || 0;
+
+      const finalPrice = discount > 0
+        ? price - (price * discount) / 100
+        : price;
+
+      const subtotal = finalPrice * item.quantity_req;
+      total += subtotal;
+
+      let discountValue = 0;
+
+      if (discount_code) {
+        const [[discountRow]] = await slowCon.query(
+          `SELECT discount_value FROM discount_codes
+            WHERE code = ? AND validity = 1 AND NOW() BETWEEN valid_from AND valid_until`,
+          [discount_code]
+        );
+
+        if (discountRow) {
+          discountValue = parseFloat(discountRow.discount_value) || 0;
+          total = total - (total * discountValue) / 100;
+
+          await slowCon.query(
+            `UPDATE discount_codes SET used_count = used_count + 1, update_at = NOW()
+       WHERE code = ?`,
+            [discount_code]
+          );
+        }
       }
 
-      if (printRow.stock < item.quantity_req) {
-        await slowCon.rollback();
-        return res.status(400).json({ error: `Disponibilità insufficiente per '${printRow.name}'` });
-      }
-
-      const finalPrice = printRow.discount
-        ? printRow.price - (printRow.price * printRow.discount) / 100
-        : printRow.price;
-
-      total += finalPrice * item.quantity_req;
-
+      // Inserimento in order_print
       await slowCon.query(
         `INSERT INTO order_print (
           id_print, slug, id_order, quantity_req, created_at, updated_at
@@ -89,11 +120,18 @@ const createOrder = async (req, res) => {
         [printRow.id, item.slug, orderId, item.quantity_req]
       );
 
+      // Aggiornamento stock
+      await slowCon.query(
+        `UPDATE prints SET stock = stock - ? WHERE id = ?`,
+        [item.quantity_req, printRow.id]
+      );
+
+      // Preparazione email
       orderItemsHtml += `<li>${printRow.name} - Qty: ${item.quantity_req} - Prezzo: €${finalPrice.toFixed(2)}</li>`;
       orderItemsText += `- ${printRow.name} x${item.quantity_req} - €${finalPrice.toFixed(2)}\n`;
     }
 
-    // 3. Salva total_price nel DB
+    // 4. Salva total_price nell’ordine
     await slowCon.query(
       `UPDATE orders SET total_price = ? WHERE id = ?`,
       [total.toFixed(2), orderId]
@@ -101,15 +139,13 @@ const createOrder = async (req, res) => {
 
     await slowCon.commit();
 
-    // 4. Invia email
+    // 5. Email
     const subject = 'Conferma Ordine';
     const htmlContent = `
       <h1>Ciao ${full_name},</h1>
       <p>Grazie per il tuo ordine #${orderId}!</p>
       <p>Qui il tuo riepilogo ordine:</p>
-      <ul>
-        ${orderItemsHtml}
-      </ul>
+      <ul>${orderItemsHtml}</ul>
       <p><strong>Totale ordine: €${total.toFixed(2)}</strong></p>
       <p>Ti informeremo quando sarà spedito.</p>
     `;
@@ -144,12 +180,18 @@ const createOrder = async (req, res) => {
       Totale: €${total.toFixed(2)}
     `;
 
-    await sendTestEmail(
-      mail, subject, htmlContent, textContent,
-      adminEmail, adminSubject, adminHtmlContent, adminTextContent
-    );
+    // Email al cliente
+    await sendTestEmail(mail, subject, htmlContent, textContent);
+
+    // Email all'amministratore
+    await sendTestEmail(adminEmail, adminSubject, adminHtmlContent, adminTextContent);
 
     res.status(201).json({ message: "Ordine creato e email inviata", order_id: orderId, total_price: total.toFixed(2) });
+    res.status(201).json({
+      message: "Ordine creato e email inviata",
+      order_id: orderId,
+      total_price: total.toFixed(2)
+    });
 
   } catch (error) {
     await slowCon.rollback();

@@ -1,8 +1,8 @@
-function errorHandler (err, req, res, next) {
-    
-    res.status(500).json({
-        error: "Errore nel server"
-    })
-}
+export default function errorHandler(err, req, res, next) {
+  console.error("ERRORE GESTITO:", err);
 
-export default errorHandler;
+  res.status(500).json({
+    message: "Errore interno del server.",
+    error: err.message,
+  });
+}
