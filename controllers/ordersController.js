@@ -25,8 +25,8 @@ const createOrder = async (req, res) => {
     shipping_address,
     order_status,
     payment_intent_id,
-    prints
     prints,
+
     discount_code
   } = req.body;
   console.log(req.body);
