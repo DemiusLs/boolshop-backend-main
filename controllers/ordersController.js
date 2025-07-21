@@ -24,8 +24,11 @@ const createOrder = async (req, res) => {
     billing_address,
     shipping_address,
     order_status,
+    payment_intent_id,
     prints
   } = req.body;
+  console.log(req.body);
+
 
   if (!Array.isArray(prints)) {
     return res.status(400).json({ error: "'prints' deve essere un array" });
@@ -39,9 +42,10 @@ const createOrder = async (req, res) => {
       `INSERT INTO orders (
         full_name, mail, phone_number,
         billing_address, shipping_address, order_status,
+            payment_intent_id,
         created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [full_name, mail, phone_number, billing_address, shipping_address, order_status]
+      [full_name, mail, phone_number, billing_address, shipping_address, order_status, payment_intent_id]
     );
 
     const orderId = orderResult.insertId;
@@ -145,7 +149,7 @@ const createOrder = async (req, res) => {
       adminEmail, adminSubject, adminHtmlContent, adminTextContent
     );
 
-    res.status(201).json({ message: "Ordine creato e email inviata", order_id: orderId  ,total_price: total.toFixed(2)});
+    res.status(201).json({ message: "Ordine creato e email inviata", order_id: orderId, total_price: total.toFixed(2) });
 
   } catch (error) {
     await slowCon.rollback();
