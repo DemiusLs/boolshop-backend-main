@@ -1,7 +1,7 @@
 import connection from "../db.js";
 import { sendTestEmail } from "../emailService.js";
 
-const slowCon = connection.promise()
+const slowCon = connection.promise();
 
 // GET tutti gli ordini
 const getAllOrders = async (req, res) => {
@@ -12,8 +12,6 @@ const getAllOrders = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-
 
 // POST crea nuovo ordine
 const createOrder = async (req, res) => {
@@ -26,11 +24,8 @@ const createOrder = async (req, res) => {
     order_status,
     payment_intent_id,
     prints,
-
     discount_code
   } = req.body;
-  console.log(req.body);
-
 
   if (!Array.isArray(prints)) {
     return res.status(400).json({ error: "'prints' deve essere un array" });
@@ -39,10 +34,10 @@ const createOrder = async (req, res) => {
   try {
     await slowCon.beginTransaction();
 
-    // 1. Verifica disponibilità stock
+    // 1. Verifica stock
     for (const item of prints) {
       const [[printRow]] = await slowCon.query(
-        `SELECT stock FROM prints WHERE slug = ?`,
+        "SELECT stock FROM prints WHERE slug = ?",
         [item.slug]
       );
 
@@ -57,27 +52,26 @@ const createOrder = async (req, res) => {
       }
     }
 
-    // 2. Crea ordine senza prezzo
+    // 2. Crea ordine
     const [orderResult] = await slowCon.query(
       `INSERT INTO orders (
         full_name, mail, phone_number,
         billing_address, shipping_address, order_status,
-            payment_intent_id,
+        payment_intent_id,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [full_name, mail, phone_number, billing_address, shipping_address, order_status, payment_intent_id]
     );
 
     const orderId = orderResult.insertId;
-
     let total = 0;
     let orderItemsHtml = '';
     let orderItemsText = '';
 
-    // 3. Inserisci prodotti in order_print + calcolo totale + aggiorna stock
+    // 3. Gestione articoli + sconti + stock
     for (const item of prints) {
       const [[printRow]] = await slowCon.query(
-        `SELECT id, name, price, discount, stock FROM prints WHERE slug = ?`,
+        "SELECT id, name, price, discount, stock FROM prints WHERE slug = ?",
         [item.slug]
       );
 
@@ -96,23 +90,23 @@ const createOrder = async (req, res) => {
       if (discount_code) {
         const [[discountRow]] = await slowCon.query(
           `SELECT discount_value FROM discount_codes
-            WHERE code = ? AND validity = 1 AND NOW() BETWEEN valid_from AND valid_until`,
+           WHERE code = ? AND validity = 1 AND NOW() BETWEEN valid_from AND valid_until`,
           [discount_code]
         );
 
         if (discountRow) {
           discountValue = parseFloat(discountRow.discount_value) || 0;
-          total = total - (total * discountValue) / 100;
+          total -= (total * discountValue) / 100;
 
           await slowCon.query(
-            `UPDATE discount_codes SET used_count = used_count + 1, update_at = NOW()
-       WHERE code = ?`,
+            `UPDATE discount_codes
+             SET used_count = used_count + 1, update_at = NOW()
+             WHERE code = ?`,
             [discount_code]
           );
         }
       }
 
-      // Inserimento in order_print
       await slowCon.query(
         `INSERT INTO order_print (
           id_print, slug, id_order, quantity_req, created_at, updated_at
@@ -120,20 +114,18 @@ const createOrder = async (req, res) => {
         [printRow.id, item.slug, orderId, item.quantity_req]
       );
 
-      // Aggiornamento stock
       await slowCon.query(
-        `UPDATE prints SET stock = stock - ? WHERE id = ?`,
+        "UPDATE prints SET stock = stock - ? WHERE id = ?",
         [item.quantity_req, printRow.id]
       );
 
-      // Preparazione email
       orderItemsHtml += `<li>${printRow.name} - Qty: ${item.quantity_req} - Prezzo: €${finalPrice.toFixed(2)}</li>`;
       orderItemsText += `- ${printRow.name} x${item.quantity_req} - €${finalPrice.toFixed(2)}\n`;
     }
 
-    // 4. Salva total_price nell’ordine
+    // 4. Salva il prezzo totale
     await slowCon.query(
-      `UPDATE orders SET total_price = ? WHERE id = ?`,
+      "UPDATE orders SET total_price = ? WHERE id = ?",
       [total.toFixed(2), orderId]
     );
 
@@ -151,14 +143,14 @@ const createOrder = async (req, res) => {
     `;
 
     const textContent = `
-      Ciao ${full_name}, grazie per il tuo ordine #${orderId}!
+Ciao ${full_name}, grazie per il tuo ordine #${orderId}!
 
-      Riepilogo ordine:
-      ${orderItemsText}
+Riepilogo ordine:
+${orderItemsText}
 
-      Totale: €${total.toFixed(2)}
+Totale: €${total.toFixed(2)}
 
-      Ti informeremo quando sarà spedito.
+Ti informeremo quando sarà spedito.
     `;
 
     const adminEmail = process.env.ADMINEMAIL;
@@ -171,32 +163,45 @@ const createOrder = async (req, res) => {
       <p><strong>Totale ordine: €${total.toFixed(2)}</strong></p>
     `;
     const adminTextContent = `
-      Nuovo ordine ricevuto
-      Cliente: ${full_name} (${mail})
+Nuovo ordine ricevuto
+Cliente: ${full_name} (${mail})
 
-      Riepilogo ordine:
-      ${orderItemsText}
+Riepilogo ordine:
+${orderItemsText}
 
-      Totale: €${total.toFixed(2)}
+Totale: €${total.toFixed(2)}
     `;
 
-    // Email al cliente
-    await sendTestEmail(mail, subject, htmlContent, textContent);
+try {
+  await sendTestEmail(mail, subject, htmlContent, textContent);
+  console.log("✅ Email inviata al cliente:", mail);
+} catch (err) {
+  console.error("❌ Errore email cliente:", err);
+}
 
-    // Email all'amministratore
-    await sendTestEmail(adminEmail, adminSubject, adminHtmlContent, adminTextContent);
+try {
+  await sendTestEmail(adminEmail, adminSubject, adminHtmlContent, adminTextContent);
+  console.log("✅ Email inviata all’admin:", adminEmail);
+} catch (err) {
+  console.error("❌ Errore email admin:", err);
+}
 
-    res.status(201).json({ message: "Ordine creato e email inviata", order_id: orderId, total_price: total.toFixed(2) });
-   
+
+    res.status(201).json({
+      message: "Ordine creato e email inviate",
+      order_id: orderId,
+      total_price: total.toFixed(2)
+    });
+
 
   } catch (error) {
     await slowCon.rollback();
-    console.error(error);
+    console.error("Errore nella creazione dell'ordine:", error);
     res.status(500).json({ error: error.message });
   }
 };
 
-// DELETE ordine + prints associati
+// DELETE ordine
 const deleteOrder = async (req, res) => {
   const orderId = req.params.id;
 
@@ -204,7 +209,6 @@ const deleteOrder = async (req, res) => {
     await slowCon.beginTransaction();
 
     await slowCon.query("DELETE FROM order_print WHERE id_order = ?", [orderId]);
-
     const [result] = await slowCon.query("DELETE FROM orders WHERE id = ?", [orderId]);
 
     if (result.affectedRows === 0) {
@@ -220,5 +224,8 @@ const deleteOrder = async (req, res) => {
   }
 };
 
-export default { getAllOrders, createOrder, deleteOrder };
-
+export default {
+  getAllOrders,
+  createOrder,
+  deleteOrder
+};
