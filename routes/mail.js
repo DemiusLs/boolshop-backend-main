@@ -63,7 +63,7 @@ router.post('/newsletter', async (req, res) => {
     try {
         const mailOptions = {
             from: `"BoolShop Newsletter" <newsletter@boolshop.it>`,
-            to: "info@boolshop.it", // 📩 Dove vuoi ricevere la notifica
+            to: {email}, // 📩 Dove vuoi ricevere la notifica
             subject: `Nuovo iscritto alla newsletter`,
             html: `
                 <h2>Nuova iscrizione alla newsletter</h2>
@@ -82,6 +82,35 @@ router.post('/newsletter', async (req, res) => {
         console.error('Errore invio newsletter:', error);
         res.status(500).json({ message: 'Errore durante l\'invio dell\'email.' });
     }
+});
+
+//Rotta per l'invio del codice sconto
+router.post('/send-discount', async (req, res) => {
+  const { recipientEmail, subject, messageHtml, messageText } = req.body;
+
+  if (!recipientEmail || !subject || !messageHtml || !messageText) {
+    return res.status(400).json({ message: 'Tutti i campi sono obbligatori.' });
+  }
+
+  try {
+    const mailOptions = {
+      from: '"BoolShop" <info@boolshop.it>',
+      to: recipientEmail,
+      subject,
+      html: messageHtml,
+      text: messageText,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log('Email di benvenuto inviata:', info.messageId);
+    console.log('Anteprima (Mailtrap o test):', nodemailer.getTestMessageUrl(info));
+
+    res.status(200).json({ message: 'Email inviata con successo!' });
+  } catch (error) {
+    console.error('Errore durante l\'invio dell\'email:', error);
+    res.status(500).json({ message: 'Errore durante l\'invio dell\'email.' });
+  }
 });
 
 
