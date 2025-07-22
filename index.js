@@ -35,7 +35,7 @@ app.use("/api/create-payment-intent", paymentRoutes); // <-- coerente con il fro
 // Gestione 404 e errori
 app.use("/api/discounts", discountRoutes);
 
-app.use('/api/email', mailRoutes);
+
 
 
 

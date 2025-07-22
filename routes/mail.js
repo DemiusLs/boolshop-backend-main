@@ -41,19 +41,8 @@ router.post('/contact', async (req, res) => {
 
         const info = await transporter.sendMail(mailOptions);
 
-        
-
-        console.log('Test email inviata con successo! ID messaggio: %s', info.messageId);
-        console.log('Mailtrap URL per l\'email: %s', nodemailer.getTestMessageUrl(info));
-        return info;
-    } catch (error) {
-        console.error('Errore durante l\'invio del test email:', error);
-        throw error;
-    }
-}
-// --- Fine configurazione email ---
-
-
+        console.log('Test email inviata con successo! ID messaggio:', info.messageId);
+        console.log('Mailtrap URL per l\'email:', nodemailer.getTestMessageUrl(info));
 
         res.status(200).json({ message: 'Email inviata con successo!' });
 
@@ -63,4 +52,40 @@ router.post('/contact', async (req, res) => {
     }
 });
 
+
+// 📬 Rotta per iscrizione newsletter
+router.post('/newsletter', async (req, res) => {
+   
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ message: 'L\'email è obbligatoria.' });
+    }
+
+    try {
+        const mailOptions = {
+            from: `"BoolShop Newsletter" <newsletter@boolshop.it>`,
+            to: "info@boolshop.it", // 📩 Dove vuoi ricevere la notifica
+            subject: `Nuovo iscritto alla newsletter`,
+            html: `
+                <h2>Nuova iscrizione alla newsletter</h2>
+                <p><strong>Email:</strong> ${email}</p>
+            `,
+            text: `Nuova iscrizione alla newsletter:\n\nEmail: ${email}`
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+
+        console.log('Email iscrizione newsletter inviata! ID:', info.messageId);
+
+        res.status(200).json({ message: 'Iscrizione avvenuta con successo!' });
+
+    } catch (error) {
+        console.error('Errore invio newsletter:', error);
+        res.status(500).json({ message: 'Errore durante l\'invio dell\'email.' });
+    }
+});
+
+
 export default router;
+
