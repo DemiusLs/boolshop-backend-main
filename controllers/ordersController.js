@@ -187,11 +187,7 @@ const createOrder = async (req, res) => {
     await sendTestEmail(adminEmail, adminSubject, adminHtmlContent, adminTextContent);
 
     res.status(201).json({ message: "Ordine creato e email inviata", order_id: orderId, total_price: total.toFixed(2) });
-    res.status(201).json({
-      message: "Ordine creato e email inviata",
-      order_id: orderId,
-      total_price: total.toFixed(2)
-    });
+   
 
   } catch (error) {
     await slowCon.rollback();
