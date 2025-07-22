@@ -1,30 +1,48 @@
+// routes/mail.js
+
 import express from "express";
 import nodemailer from "nodemailer";
+
 const router = express.Router();
 
-// --- Configurazione Nodemailer per Mailtrap (integrata qui) ---
+// Configurazione Nodemailer
 const transporter = nodemailer.createTransport({
     host: process.env.MAILTRAP_HOST,
     port: parseInt(process.env.MAILTRAP_PORT, 10),
-    secure: false,
     auth: {
         user: process.env.MAILTRAP_USER,
         pass: process.env.MAILTRAP_PASS
     }
 });
 
-// Funzione helper per l'invio dell'email (integrata qui)
-async function sendTestEmail(to, subject, htmlContent, textContent) {
+// 📬 Rotta per il form contatti
+router.post('/contact', async (req, res) => {
+    const { name, email, topic, message } = req.body;
+
+    if (!name || !email || !topic || !message) {
+        return res.status(400).json({ message: 'Tutti i campi sono obbligatori.' });
+    }
+
     try {
         const mailOptions = {
-            from: process.env.EMAIL_FROM_ADDRESS,
-            to: to,
-            subject: subject,
-            html: htmlContent,
-            text: textContent
+            from: `"${name}" <${email}>`,
+            to: "info@boolshop.it",
+            subject: `Nuovo messaggio da ${name} - Argomento: ${topic}`,
+            html: `
+                <h2>Nuovo messaggio dal form di contatto</h2>
+                <p><strong>Nome:</strong> ${name}</p>
+                <p><strong>Email:</strong> ${email}</p>
+                <p><strong>Argomento:</strong> ${topic}</p>
+                <p><strong>Messaggio:</strong></p>
+                <p>${message.replace(/\n/g, "<br>")}</p>
+            `,
+            text: message
         };
 
         const info = await transporter.sendMail(mailOptions);
+
+        
+
         console.log('Test email inviata con successo! ID messaggio: %s', info.messageId);
         console.log('Mailtrap URL per l\'email: %s', nodemailer.getTestMessageUrl(info));
         return info;
@@ -36,19 +54,12 @@ async function sendTestEmail(to, subject, htmlContent, textContent) {
 // --- Fine configurazione email ---
 
 
-router.post('/send-test-email', async (req, res) => {
-    const { recipientEmail, subject, messageHtml, messageText } = req.body;
 
-    if (!recipientEmail || !subject || (!messageHtml && !messageText)) {
-        return res.status(400).json({ message: 'Missing required fields: recipientEmail, subject, and either messageHtml or messageText.' });
-    }
+        res.status(200).json({ message: 'Email inviata con successo!' });
 
-    try {
-        await sendTestEmail(recipientEmail, subject, messageHtml, messageText);
-        res.status(200).json({ message: 'Test email request sent to Mailtrap successfully!' });
     } catch (error) {
-        console.error('Error in /api/send-test-email:', error);
-        res.status(500).json({ message: 'Failed to send test email.', error: error.message });
+        console.error('Errore durante l\'invio:', error);
+        res.status(500).json({ message: 'Errore durante l\'invio dell\'email.' });
     }
 });
 
