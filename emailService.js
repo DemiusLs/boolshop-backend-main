@@ -23,12 +23,12 @@ export async function sendTestEmail(to, subject, htmlContent, textContent) {
         };
 
         const info = await transporter.sendMail(mailOptions);
-        console.log('Test email inviata con successo! ID messaggio: %s', info.messageId);
-        console.log('Mailtrap URL per l\'email: %s', nodemailer.getTestMessageUrl(info));
+        console.log(`📧 Email inviata a: ${to} - MessageId: ${info.messageId}`);
         return info;
     } catch (error) {
-        console.error('Errore durante l\'invio della test email:', error);
+        console.error(`❌ Errore invio email a: ${to}`, error);
         throw error;
     }
 }
+
 // --- Fine configurazione email ---
