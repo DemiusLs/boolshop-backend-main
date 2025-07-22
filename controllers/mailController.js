@@ -29,7 +29,7 @@ async function sendTestEmail(to, subject, htmlContent, textContent) {
         console.log('Mailtrap URL per l\'email: %s', nodemailer.getTestMessageUrl(info));
         return info;
     } catch (error) {
-        console.error('Errore durante l\'invio della test email:', error);
+        console.error('Errore durante l\'invio del test email:', error);
         throw error;
     }
 }

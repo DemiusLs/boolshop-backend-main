@@ -193,6 +193,7 @@ try {
       total_price: total.toFixed(2)
     });
 
+
   } catch (error) {
     await slowCon.rollback();
     console.error("Errore nella creazione dell'ordine:", error);

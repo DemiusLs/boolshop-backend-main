@@ -5,7 +5,7 @@ import Stripe from "stripe";
 
 import printsRoutes from "./routes/print.js";
 import ordersRoutes from "./routes/order.js";
-import mailRoutes from "./routes/mail.js";
+import mailRoutes from "./controllers/mailController.js";
 import paymentRoutes from "./routes/payment.js";
 import discountRoutes from "./routes/discount.js";
 import imagePath from "./middlewares/imagePath.js";
