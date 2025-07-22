@@ -27,6 +27,7 @@ const createOrder = async (req, res) => {
     discount_code
   } = req.body;
 
+const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
   if (!Array.isArray(prints)) {
     return res.status(400).json({ error: "'prints' deve essere un array" });
   }
@@ -34,12 +35,14 @@ const createOrder = async (req, res) => {
   try {
     await slowCon.beginTransaction();
 
+    
     // 1. Verifica stock
     for (const item of prints) {
-      const [[printRow]] = await slowCon.query(
-        "SELECT stock FROM prints WHERE slug = ?",
-        [item.slug]
-      );
+     const [[printRow]] = await slowCon.query(
+   "SELECT stock FROM prints WHERE slug = ?",
+  [item.slug]
+);
+
 
       if (!printRow) {
         await slowCon.rollback();
@@ -71,9 +74,11 @@ const createOrder = async (req, res) => {
     // 3. Gestione articoli + sconti + stock
     for (const item of prints) {
       const [[printRow]] = await slowCon.query(
-        "SELECT id, name, price, discount, stock FROM prints WHERE slug = ?",
+        "SELECT id, name, price, discount,stock, img_url FROM prints WHERE slug = ?",
         [item.slug]
       );
+      console.log("printRow:", printRow);
+
 
       const price = parseFloat(printRow.price) || 0;
       const discount = parseFloat(printRow.discount) || 0;
@@ -119,9 +124,19 @@ const createOrder = async (req, res) => {
         [item.quantity_req, printRow.id]
       );
 
-      orderItemsHtml += `<li>${printRow.name} - Qty: ${item.quantity_req} - Prezzo: €${finalPrice.toFixed(2)}</li>`;
+   orderItemsHtml += `
+  <li style="margin-bottom:10px;">
+    <img src="${baseUrl}/images/prints/${printRow.img_url}" 
+         alt="${printRow.name}" 
+         style="width:150px;height:auto;vertical-align:middle;margin-right:10px;border-radius:4px;border:1px solid #ddd;" />
+    <strong>${printRow.name}</strong> - Qty: ${item.quantity_req} - Prezzo: €${finalPrice.toFixed(2)}
+  </li>
+`;
+
+
       orderItemsText += `- ${printRow.name} x${item.quantity_req} - €${finalPrice.toFixed(2)}\n`;
-    }
+    
+
 
     // 4. Salva il prezzo totale
     await slowCon.query(
@@ -192,7 +207,7 @@ try {
       order_id: orderId,
       total_price: total.toFixed(2)
     });
-
+  }
 
   } catch (error) {
     await slowCon.rollback();
@@ -200,6 +215,7 @@ try {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 // DELETE ordine
 const deleteOrder = async (req, res) => {
