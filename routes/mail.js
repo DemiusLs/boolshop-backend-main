@@ -1,5 +1,3 @@
-// routes/mail.js
-
 import express from "express";
 import nodemailer from "nodemailer";
 
@@ -41,19 +39,8 @@ router.post('/contact', async (req, res) => {
 
         const info = await transporter.sendMail(mailOptions);
 
-        
-
-        console.log('Test email inviata con successo! ID messaggio: %s', info.messageId);
-        console.log('Mailtrap URL per l\'email: %s', nodemailer.getTestMessageUrl(info));
-        return info;
-    } catch (error) {
-        console.error('Errore durante l\'invio del test email:', error);
-        throw error;
-    }
-}
-// --- Fine configurazione email ---
-
-
+        console.log('Test email inviata con successo! ID messaggio:', info.messageId);
+        console.log('Mailtrap URL per l\'email:', nodemailer.getTestMessageUrl(info));
 
         res.status(200).json({ message: 'Email inviata con successo!' });
 
